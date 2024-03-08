@@ -1,0 +1,152 @@
+setwd("~/Projects/")
+setwd("schildcrout/acml")
+setwd("inst/unitTests/")
+library('RUnit')#
+library('acml')
+source("FittingFns.R") # Validated source for comparisons#
+source("FittingFnsC.R")#
+source("SimGenDatFns.R")#
+#
+tolerance <- 1e-10'
+''
+source("FittingFns.R") # Validated source for comparisons#
+source("FittingFnsC.R")#
+source("SimGenDatFns.R")#
+#
+tolerance <- 1e-10
+ni        <- 11#
+    wi        <- rbind(t(rep(1/ni, ni)), 1:ni / (2*(ni-1)) - (0.55/2) )#
+    beta      <- rnorm(4, sd=4)#
+    cutpoints <- c(-1, 1, -2, 2)#
+    ncutpoints<- length(cutpoints)#
+    sampprob  <- c(0.4, 0.8)#
+    sigma0    <- sqrt(4.1)#
+    sigma1    <- sqrt(0.24)#
+    sigmae    <- sqrt(0.51)#
+    rho       <- 0.2#
+    xi        <- as.matrix(data.frame(intercept=rep(1,ni), time=(1:11/5 - 1.2), grp=rep(1, ni), snp=rep(1,ni) ))#
+    zi        <- xi[,1:2]#
+    vi        <- vi.calc(zi, sigma0, sigma1, rho, sigmae)#
+#
+    mu          <- xi %*% beta#
+    mu_q        <- as.vector(wi %*% mu)#
+    sigma_q     <- wi %*% vi %*% t(wi)#
+    ac          <- 0
+result <- .C("lci_bivar",#
+                 cutpoints  = as.double(cutpoints),#
+                 ncutpoints = as.integer(ncutpoints),#
+                 sampprob   = as.double(sampprob),#
+                 mu_q       = as.double(mu_q),#
+                 sigma_q    = as.double(sigma_q),#
+                 ac         = as.double(ac))#
+    reference <- lci.bivar(cutpoints, sampprob, mu_q, sigma_q)
+reference
+result
+beta      <- rnorm(4, sd=4)#
+   sigma0    <- sqrt(runif(1, 0.1, 4))#
+   sigma1    <- sqrt(runif(1, 0.1, 4))#
+   sigmae    <- sqrt(runif(1, 0.1, 4))#
+   rho       <- runif(1, -0.2, 0.2)#
+   cutpoints <- c(-1, 1)#
+   ncutpoints<- length(cutpoints)#
+   sampprob <- c(0.8, 0.4, 0.8)#
+   ni        <- 11#
+   xi        <- as.matrix(data.frame(intercept=rep(1,ni), time=(1:11/5 - 1.2), grp=rep(1, ni), snp=rep(1,ni) ))#
+   zi        <- xi[,1:2]#
+   grad      <- rep(0, length(beta)+4)#
+#
+   vi        <- vi.calc(zi, sigma0, sigma1, rho, sigmae)#
+#
+   n         <- ni#
+   npar      <- length(beta)#
+#
+   vi_tmp    <- matrix(rep(0, ni*ni), ncol=ni)#
+#
+   wi <- t(rnorm(ni))#
+#
+   ac        <- 0
+result <- .C("exp_ascertainment_correction_univar",#
+                 n          = as.integer(n),#
+                 ni         = as.integer(ni),#
+                 npar       = as.integer(npar),#
+                 xi         = as.double(xi),#
+                 vi         = as.double(vi),#
+                 wi         = as.double(wi),#
+                 beta       = as.double(beta),#
+                 cutpoints  = as.double(cutpoints),#
+                 ncutpoints = as.integer(ncutpoints),#
+                 sampprob   = as.double(sampprob),#
+                 vi_tmp     = as.double(vi_tmp),#
+                 ac         = as.double(ac))#
+    reference <- ascertainment.correction(NA, xi, zi, wi, beta, sigma0, sigma1, rho, sigmae, cutpoints, sampprob)
+reference
+result
+log(result[['ac']])
+reference
+ac        <- 23#
+#
+   result <- .C("exp_ascertainment_correction_univar",#
+                 n          = as.integer(n),#
+                 ni         = as.integer(ni),#
+                 npar       = as.integer(npar),#
+                 xi         = as.double(xi),#
+                 vi         = as.double(vi),#
+                 wi         = as.double(wi),#
+                 beta       = as.double(beta),#
+                 cutpoints  = as.double(cutpoints),#
+                 ncutpoints = as.integer(ncutpoints),#
+                 sampprob   = as.double(sampprob),#
+                 vi_tmp     = as.double(vi_tmp),#
+                 ac         = as.double(ac))#
+    reference <- ascertainment.correction(NA, xi, zi, wi, beta, sigma0, sigma1, rho, sigmae, cutpoints, sampprob)
+log(result[['ac']]) - reference
+reference
+log(0.203779)
+exp(0.203779)
+exp(0.0.06763083)
+exp(0.06763083)
+beta        <- rnorm(4, sd=4)#
+    sigma0      <- sqrt(runif(1, 0.1, 4))#
+    sigma1      <- sqrt(runif(1, 0.1, 4))#
+    sigmae      <- sqrt(runif(1, 0.1, 4))#
+    rho         <- runif(1, -0.2, 0.2)#
+#
+print(paste('test.ACML.MLE.C beta=', beta))#
+#
+    rho         <- 0.1#
+    nlow        <- 11#
+    nhigh       <- 11#
+    prob.grp    <- 0.10#
+#
+    count       <- 0#
+    N           <- 1000#
+#
+    answer      <- append(beta, c(log(sigma0), log(sigma1), rho, log(sigmae)))#
+#
+    inits       <- c(beta, log(sigma0), log(sigma1), log((1+rho)/(1-rho)), log(sigmae))#
+    dat         <- GenPopnData(N, n=nhigh, beta, sigma0, sigma1, rho, sigmae, prob.grp, n.low=nlow, n.high=nhigh)#
+#
+    PopnQuants <- est.quants(2500, nhigh, beta, sigma0, sigma1, rho, sigmae, prob.grp, c(0.1,.125, .2,.8, .875, .9), n.low=nlow, n.high=nhigh)
+method <- "mean"
+print(paste("method",method))#
+        ods <- ODS.Sampling(dat=dat,#
+                            PopnQuants,  #
+                            method,#
+                            c(0.2,0.8),#
+                            TargetNSampledPerStratum=c(20,50,20), #
+                            "IndepODS")#
+#
+        result <- ACML.LME.C(#
+                    ods$Y, ods$X, ods$Z, ods$id*1.0,#
+                    method,#
+                    inits,#
+                    ods$cutpoint,#
+                    ods$SampProb,#
+                    ods$SampProbi)
+reference <- ACML.LME(#
+            ods$Y, ods$X, ods$Z, ods$id*1.0,#
+            method,#
+            inits,#
+            ods$cutpoint,#
+            ods$SampProb,#
+            ods$SampProbi)
